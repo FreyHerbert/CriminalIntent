@@ -1,6 +1,7 @@
 package com.leiyun.criminalintent;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -55,6 +56,15 @@ public class CrimeFragment extends Fragment {
     private File mPhotoFile;
 
     private Crime mCrime;
+    private Callbacks mCallbacks;
+
+    /**
+     * fragment回调接口
+     */
+    public interface Callbacks {
+        void onCrimeUpdated(Crime crime);
+    }
+
 
     public static CrimeFragment newInstance(UUID crimeId) {
         Bundle args = new Bundle();
@@ -93,6 +103,7 @@ public class CrimeFragment extends Fragment {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 mCrime.setTitle(charSequence.toString());
+                updateCrime();
             }
 
             @Override
@@ -121,6 +132,7 @@ public class CrimeFragment extends Fragment {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 mCrime.setSolved(b);
+                updateCrime();
             }
         });
 
@@ -193,11 +205,35 @@ public class CrimeFragment extends Fragment {
         return v;
     }
 
+    /**
+     * 获取fragment的回调接口的实例
+     * @param context
+     */
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
+        Activity activity;
+        if (context instanceof Activity) {
+            activity = (Activity) context;
+            mCallbacks = (Callbacks) activity;
+        }
+    }
+
     @Override
     public void onPause() {
         super.onPause();
         CrimeLab.get(getActivity())
                 .updateCrime(mCrime);
+    }
+
+    /**
+     * 设置mCallbacks为空
+     */
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mCallbacks = null;
     }
 
     @Override
@@ -207,12 +243,13 @@ public class CrimeFragment extends Fragment {
             return;
         }
 
-        if (requestCode == REQUEST_DATE) {
+        if (requestCode == REQUEST_DATE) { // 日历
             Date date = (Date) data
                     .getSerializableExtra(DatePickerFragment.EXTRA_DATE);
             mCrime.setDate(date);
+            updateCrime();
             updateDate();
-        } else if (requestCode == REQUEST_CONTACT) { // 判断是否是是从联系人活动中返回的
+        } else if (requestCode == REQUEST_CONTACT && data != null) { // 判断是否是是从联系人活动中返回的
             Uri contactUri = data.getData(); // 这个URI是个数据定位符，指向用户所选联系人
             // 指定你想查询的字段，将它返回
             // 字段值为
@@ -232,11 +269,13 @@ public class CrimeFragment extends Fragment {
                 c.moveToFirst();
                 String suspect = c.getString(0);
                 mCrime.setSuspect(suspect);
+                updateCrime();
                 mSuspectButton.setText(suspect);
             } finally{
                 c.close();
             }
         } else if (requestCode == REQUEST_PHOTO) {
+            updateCrime();
             updatePotoView();
         }
     }
@@ -283,5 +322,16 @@ public class CrimeFragment extends Fragment {
                     getActivity());
             mPhotoView.setImageBitmap(bitmap);
         }
+    }
+
+    /**
+     * 更新crime
+     */
+    private void updateCrime() {
+        //更新数据库里的crime信息
+        CrimeLab.get(getActivity())
+                .updateCrime(mCrime);
+
+        mCallbacks.onCrimeUpdated(mCrime);
     }
 }

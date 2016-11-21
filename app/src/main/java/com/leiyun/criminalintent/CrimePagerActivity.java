@@ -20,7 +20,8 @@ import java.util.UUID;
  * Created by LeiYun on 2016/11/1 0001.
  */
 
-public class CrimePagerActivity extends AppCompatActivity {
+public class CrimePagerActivity extends AppCompatActivity
+implements CrimeFragment.Callbacks{
 
     private static final String EXTRA_CRIME_ID =
             "com.leiyun.criminalintent.crime_id";
@@ -66,5 +67,14 @@ public class CrimePagerActivity extends AppCompatActivity {
                 break;
             }
         }
+    }
+
+    /**
+     * CrimeFragment.Callbacks接口的方法
+     * @param crime
+     */
+    @Override
+    public void onCrimeUpdated(Crime crime) {
+        // 这是一个空方法
     }
 }

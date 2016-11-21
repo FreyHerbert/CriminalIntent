@@ -1,5 +1,7 @@
 package com.leiyun.criminalintent;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -31,8 +33,17 @@ public class CrimeListFragment extends Fragment {
     private static final String SAVED_SUBTITLE_VISIBLE =
             "subtitle";
 
+    /**
+     * fragment回调接口
+     */
+    public interface Callbacks{
+        void onCrimeSelected(Crime crime);
+    }
+
     private RecyclerView mCrimeRecyclerView;
     private CrimeAdapter mAdapter;
+    private Callbacks mCallbacks;
+
 
     private boolean mSubtitleVisible;
 
@@ -61,6 +72,23 @@ public class CrimeListFragment extends Fragment {
         return view;
     }
 
+    /**
+     * 获取fragment的回调接口的实例
+     * @param context
+     */
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        Activity activity;
+
+        if (context instanceof Activity) {
+            activity = (Activity)context;
+            mCallbacks = (Callbacks)activity;
+        }
+
+
+
+    }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -73,6 +101,8 @@ public class CrimeListFragment extends Fragment {
             UUID id = CrimeFragment.getCrimeId(data);
         }
     }
+
+
 
 
     @Override
@@ -90,12 +120,11 @@ public class CrimeListFragment extends Fragment {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.menu_item_new_crime:
+            case R.id.menu_item_new_crime: // 添加一个crime的操作
                 Crime crime = new Crime();
                 CrimeLab.get(getActivity()).addCrime(crime);
-                Intent intent = CrimePagerActivity
-                        .newIntent(getActivity(), crime.getId());
-                startActivity(intent);
+                updateUI();
+                mCallbacks.onCrimeSelected(crime);
                 return true;
             case R.id.menu_item_show_subtitle:
                 mSubtitleVisible = !mSubtitleVisible;
@@ -111,6 +140,15 @@ public class CrimeListFragment extends Fragment {
     public void onResume() {
         super.onResume();
         updateUI();
+    }
+
+    /**
+     * 设置mCallbacks为空
+     */
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mCallbacks = null;
     }
 
     @Override
@@ -132,7 +170,10 @@ public class CrimeListFragment extends Fragment {
         activity.getSupportActionBar().setSubtitle(subtitle);
     }
 
-    private void updateUI() {
+    /**
+     * 对CrimeListFragment更新
+     */
+    public void updateUI() {
         CrimeLab crimeLab = CrimeLab.get(getActivity());
         List<Crime> crimes = crimeLab.getCrimes();
 
@@ -182,9 +223,7 @@ public class CrimeListFragment extends Fragment {
 
         @Override
         public void onClick(View view) {
-            Intent intent = CrimePagerActivity
-                    .newIntent(getActivity(), mCrime.getId());
-            startActivity(intent);
+            mCallbacks.onCrimeSelected(mCrime);
         }
 
         @Override
